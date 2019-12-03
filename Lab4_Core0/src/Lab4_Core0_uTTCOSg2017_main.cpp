@@ -38,6 +38,8 @@ void main(void) {
     Start_REB_SPI();
     while(!REB_SPI_Ready()){}
 
+    MSG0();
+
     Custom_uTTCOS_OS_Init(TIC_CONTROL_VALUE);  // Need to update to handle coretimer interrupts
 
     // TODO -- Remove this TODO statement and next line when demo is finished and you start your Lab 2
@@ -65,7 +67,9 @@ extern volatile char ID_Task_RemoveMeSoon_Print1;
 extern volatile char ID_Task_RemoveMeSoon_Print2;
 extern volatile char ID_Task_KillerOfPrintStatements_Hunting;
 extern volatile char ID_InitFunction;
-extern volatile char ID_MessageFunction;
+extern volatile char ID_MSG_Selector;
+extern volatile char ID_sendMessage;
+extern volatile char ID_TempTest;
 
 
 
@@ -73,8 +77,11 @@ void Set_Up_NOT_START_RemoveMeSoonTasks(void) {
     printf("\n\nSET UP TASKS -- THEY DO NOT START IMMEDIATELY\n\n");
     //ID_Task_RemoveMeSoon_Print1 = uTTCOSg_AddThread(Task_RemoveMeSoon_Print1, NO_DELAY, 0.75 * ONE_SECOND);
     //ID_Task_RemoveMeSoon_Print2 = uTTCOSg_AddThread(Task_RemoveMeSoon_Print2, NO_DELAY, 2.5 * ONE_SECOND);
-    ID_InitFunction = uTTCOSg_AddThread(MyInitLCD, NO_DELAY, 0.2 * ONE_SECOND);
-    ID_MessageFunction = uTTCOSg_AddThread(MSGTest, NO_DELAY, 0.2 * ONE_SECOND);
+    ID_InitFunction = uTTCOSg_AddThread(MyInitLCD, NO_DELAY, 0.1 * ONE_SECOND);
+    ID_MSG_Selector = uTTCOSg_AddThread(MSG_Selector, NO_DELAY, 0.1 * ONE_SECOND);
+    ID_sendMessage = uTTCOSg_AddThread(SendMSG, NO_DELAY, 0.1 * ONE_SECOND);
+    //ID_TempTest = uTTCOSg_AddThread(PrintTemp, NO_DELAY, 0.25 * ONE_SECOND);
+
 
 
 

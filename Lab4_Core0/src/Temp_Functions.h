@@ -12,6 +12,6 @@
 
 float GetTemperature(GP_TIMER);
 
-
+void PrintTemp(void);
 
 #endif /* TEMP_FUNCTIONS_H_ */

@@ -28,6 +28,7 @@ void SendMSG(void);
 void MSGTest(void);
 void Print_Temp(void);
 void clearScreen(void);
+void MSG_Selector(void);
 
 
 #endif /* LCD_THREADS_H_ */

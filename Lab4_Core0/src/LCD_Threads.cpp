@@ -12,6 +12,7 @@ bool commandStringIsInstruction;
 bool LCDInitialized = false;
 
 volatile char SPI_MessageBuffer[256];
+volatile char MSG_Number = 0;
 
 void MSG0(void)
 {
@@ -20,7 +21,7 @@ void MSG0(void)
 	if(commandStringToSend){ return; }
 	commandStringToSend = true;
 	commandStringIsInstruction = false;
-	strcpy((char *) SPI_MessageBuffer, "This is MSG0");
+	strcpy((char *) SPI_MessageBuffer, "ENCM 511");
 }
 
 void MSG1(void)
@@ -30,7 +31,7 @@ void MSG1(void)
 	if(commandStringToSend){ return; }
 	commandStringToSend = true;
 	commandStringIsInstruction = false;
-	strcpy((char *) SPI_MessageBuffer, "This is MSG1");
+	strcpy((char *) SPI_MessageBuffer, "Branden Wong");
 }
 
 void MSG2(void)
@@ -40,7 +41,7 @@ void MSG2(void)
 	if(commandStringToSend){ return; }
 	commandStringToSend = true;
 	commandStringIsInstruction = false;
-	strcpy((char *) SPI_MessageBuffer, "This is MSG2");
+	strcpy((char *) SPI_MessageBuffer, "Safwan Jamal");
 }
 
 void DisplayLAB3Temp(void)
@@ -78,6 +79,37 @@ void MyInitLCD()
 	}
 }
 
+volatile char ID_MSG_Selector;
+
+void MSG_Selector()
+{
+	switch(MSG_Number)
+	{
+	case 0:
+		MSG0();
+		break;
+	case 1:
+		clearScreen();
+		break;
+	case 2:
+		MSG1();
+		break;
+	case 3:
+		clearScreen();
+		break;
+	case 4:
+		MSG2();
+		break;
+	case 5:
+		clearScreen();
+		break;
+	case 6:
+		Print_Temp();
+	}
+}
+
+volatile char ID_sendMessage;
+
 void SendMSG()
 {
 	if(!LCDInitialized)
@@ -86,58 +118,92 @@ void SendMSG()
 	}
 	static unsigned int Read_Index = 0;
 	static unsigned int state = 0;
-	static unsigned short int MessageToSend;
-	if(SPI_MessageBuffer[Read_Index] == '\0')
+	unsigned short int MessageToSend;
+	if(!commandStringToSend)
+	{
+		return;
+	}
+	if((SPI_MessageBuffer[Read_Index] == '\0' && !commandStringIsInstruction) | (commandStringIsInstruction && Read_Index == 2))
 	{
 		Read_Index = 0;
 		commandStringBeingSent = false;
+		commandStringToSend = false;
+		if(MSG_Number < 6)
+		{
+			++MSG_Number;
+		}
+		else
+		{
+			--MSG_Number;
+		}
+		return;
 	}
+	commandStringBeingSent = true;
 	switch(state)
 	{
 	case 0:
 		++state;
 		MessageToSend = ((REB_Read_SPI() & 0xF800) | (SPI_MessageBuffer[Read_Index]) | EN_HIGH);
+		if(commandStringIsInstruction)
+		{
+			MessageToSend = MessageToSend & ~IS_DATA;
+		}
+		else
+		{
+			MessageToSend = MessageToSend | IS_DATA;
+		}
 		break;
 	case 1:
 		++state;
 		MessageToSend = ((REB_Read_SPI() & 0xF800) | (SPI_MessageBuffer[Read_Index]) & ~EN_HIGH);
+		if(commandStringIsInstruction)
+		{
+			MessageToSend = MessageToSend & ~IS_DATA;
+		}
+		else
+		{
+			MessageToSend = MessageToSend | IS_DATA;
+		}
 		break;
 	case 2:
 		state = 0;
 		MessageToSend = ((REB_Read_SPI() & 0xF800) | (SPI_MessageBuffer[Read_Index]) | EN_HIGH);
 		++Read_Index;
+		if(commandStringIsInstruction)
+		{
+			MessageToSend = MessageToSend & ~IS_DATA;
+		}
+		else
+		{
+			MessageToSend = MessageToSend | IS_DATA;
+		}
 		break;
 	}
 	REB_Write_SPI(MessageToSend);
 }
 
 
-volatile char ID_MessageFunction;
-void MSGTest()
-{
-	//printf("In MSG LCD\n");
-	static unsigned short int messages[4] = {0x0500, 0x0552, 0x0452, 0x0552};
-	static int messageIndex = 0;
-	if(!LCDInitialized)
-	{
-		return;
-	}
-	if(messageIndex < 4)
-	{
-		REB_Write_SPI((REB_Read_SPI() & 0xF800) | (messages[messageIndex++]));
-	}
-	else
-	{
-		messageIndex = 1;
-	}
-}
+//void MSGTest()
+//{
+//	//printf("In MSG LCD\n");
+//	static unsigned short int messages[4] = {0x0500, 0x0552, 0x0452, 0x0552};
+//	static int messageIndex = 0;
+//	if(!LCDInitialized)
+//	{
+//		return;
+//	}
+//	if(messageIndex < 4)
+//	{
+//		REB_Write_SPI((REB_Read_SPI() & 0xF800) | (messages[messageIndex++]));
+//	}
+//	else
+//	{
+//		messageIndex = 1;
+//	}
+//}
 
 void Print_Temp()
 {
-	if(!LCDInitialized)
-	{
-		return;
-	}
 	if(commandStringBeingSent){ return; }
 	if(commandStringToSend){ return; }
 	commandStringToSend = true;
@@ -146,13 +212,22 @@ void Print_Temp()
 	int n;
 	float Current_Temp = GetTemperature(GP_TIMER_TEMP_SENSOR);
 	n = sprintf(Temperature, "%2.2f", Current_Temp);
-	strcpy((char *)SPI_MessageBuffer, Temperature);
+	strcpy((char *)SPI_MessageBuffer, "Temp: " );
+	strcpy((char *)SPI_MessageBuffer + 6, Temperature);
 }
 
 void clearScreen()
 {
-	static unsigned int state = 0;
-	unsigned short int Instruction;
+	if(commandStringBeingSent){ return; }
+	if(commandStringToSend){ return; }
+	commandStringToSend = true;
+	commandStringIsInstruction = true;
+	SPI_MessageBuffer[0] = 0x0F;
+	SPI_MessageBuffer[1] = 0x01;
+	//strcpy((char *) SPI_MessageBuffer, "\0");
+	//static unsigned int state = 0;
+	//unsigned short int Instruction;
+	/*
 	switch(state)
 	{
 	case 0:
@@ -169,6 +244,7 @@ void clearScreen()
 		++state;
 		break;
 	}
+	*/
 }
 
 //bool isSPIReady(void) {

@@ -18,6 +18,7 @@
 extern "C" void SHARC21469_uTTCOSg_Audio_Rx_Tx_Task(void);
 extern "C" void ADSP_SC589_uTTCOSg_Audio_Rx_Tx_Task(void);
 
+
 #define GP_TIMER_TEMP_SENSOR 0x3
 
 // TODO -- Once you have demonstrated the idea of uTTCOS working with print statements
